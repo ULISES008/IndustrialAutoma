@@ -1,44 +1,20 @@
 #include "definitions.h"
-
-static void timerInterrupt(void *arg)
-{
-    timer.setInterrupt();
-} 
 extern "C" void app_main()
 {
-    esp_task_wdt_deinit();
-
-    // Señal PWM
-    SERVO.setup(GPIO_NUM_5, LEDC_CHANNEL_1, 0, LEDC_TIMER_12_BIT, 50, LEDC_TIMER_0);
-    SERVO.setDuty(6);
-    //2-12
-
-    motor.setup(motor_pins, motor_ch, 2.4);
-    encoder.setup(encoder_pins, 0.333);
-    timer.setup(timerInterrupt, "timer");
-    timer.startPeriodic(dt_us);
-    
-    bt.begin("Batman");
-    while(1)
+    // Configuración ADC
+    FT.setup(34, ADC_BITWIDTH_12);
+    // Tiempo
+    prev_time = esp_timer_get_time();
+    while (1)
     {
-        
-        if(timer.interruptAvailable())
+        // Polling de tiempo transcurrido
+        current_time = esp_timer_get_time();
+        if (current_time - prev_time >= dt_us)
         {
-            float speed = encoder.getSpeed();
-            motor.setSpeed(mensaje);
-            message_length = sprintf(buffer, "%.2f\n", speed);
-            uart.write(buffer, message_length);
-        }  
-
-        if (bt.available())
-        {
-
-            bt.read(buffer, 8);
-            sscanf(buffer, "%d", &mensaje);
-            //uart.write(buffer, prueba);
-            //sprintf(buffer, "%d,%d\n", mensaje, prueba);
-            //message_length = sprintf(buffer, "%f\n", mensaje);
+            prev_time = current_time;
+            lectura = FT.read(ADC_READ_MV); // Se lee la señal en MV
         }
-        SERVO.setDuty(10);
+        // Se escriben valores en la terminal
+        printf("%.2f\n", lectura);
     }
 }
